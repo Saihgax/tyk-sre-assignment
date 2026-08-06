@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
@@ -57,8 +58,11 @@ func getKubernetesVersion(clientset kubernetes.Interface) (string, error) {
 //
 // Expects a listenAddr to bind to.
 func startServer(listenAddr string, clientset kubernetes.Interface) error {
+	app := &server{clientset: clientset}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", healthHandler)
+	mux.HandleFunc("/readyz", app.readyHandler)
 
 	fmt.Printf("Server listening on %s\n", listenAddr)
 
@@ -73,4 +77,24 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println("failed writing to response")
 	}
+}
+
+func (s *server) readyHandler(w http.ResponseWriter, r *http.Request) {
+	version, err := getKubernetesVersion(s.clientset)
+	w.Header().Set("Content-Type", "application/json")
+
+	if err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"status": "not ready",
+			"error":  err.Error(),
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"status":  "ready",
+		"version": version,
+	})
 }
