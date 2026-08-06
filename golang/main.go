@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-type server struct {
+type app struct {
 	clientset kubernetes.Interface
 }
 
@@ -58,11 +58,11 @@ func getKubernetesVersion(clientset kubernetes.Interface) (string, error) {
 //
 // Expects a listenAddr to bind to.
 func startServer(listenAddr string, clientset kubernetes.Interface) error {
-	app := &server{clientset: clientset}
+	application := &app{clientset: clientset}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", healthHandler)
-	mux.HandleFunc("/readyz", app.readyHandler)
+	mux.HandleFunc("/readyz", application.readyHandler)
 
 	fmt.Printf("Server listening on %s\n", listenAddr)
 
@@ -79,8 +79,8 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *server) readyHandler(w http.ResponseWriter, r *http.Request) {
-	version, err := getKubernetesVersion(s.clientset)
+func (a *app) readyHandler(w http.ResponseWriter, r *http.Request) {
+	version, err := getKubernetesVersion(a.clientset)
 	w.Header().Set("Content-Type", "application/json")
 
 	if err != nil {
