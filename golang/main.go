@@ -57,11 +57,12 @@ func getKubernetesVersion(clientset kubernetes.Interface) (string, error) {
 //
 // Expects a listenAddr to bind to.
 func startServer(listenAddr string, clientset kubernetes.Interface) error {
-	http.HandleFunc("/healthz", healthHandler)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", healthHandler)
 
 	fmt.Printf("Server listening on %s\n", listenAddr)
 
-	return http.ListenAndServe(listenAddr, nil)
+	return http.ListenAndServe(listenAddr, mux)
 }
 
 // healthHandler responds with the health status of the application.
