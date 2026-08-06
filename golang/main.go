@@ -9,6 +9,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+type server struct {
+	clientset kubernetes.Interface
+}
+
 func main() {
 	kubeconfig := flag.String("kubeconfig", "", "path to kubeconfig, leave empty for in-cluster")
 	listenAddr := flag.String("address", ":8080", "HTTP server listen address")
@@ -32,7 +36,7 @@ func main() {
 
 	fmt.Printf("Connected to Kubernetes %s\n", version)
 
-	if err := startServer(*listenAddr); err != nil {
+	if err := startServer(*listenAddr, clientset); err != nil {
 		panic(err)
 	}
 }
@@ -52,7 +56,7 @@ func getKubernetesVersion(clientset kubernetes.Interface) (string, error) {
 // startServer launches an HTTP server with defined handlers and blocks until it's terminated or fails with an error.
 //
 // Expects a listenAddr to bind to.
-func startServer(listenAddr string) error {
+func startServer(listenAddr string, clientset kubernetes.Interface) error {
 	http.HandleFunc("/healthz", healthHandler)
 
 	fmt.Printf("Server listening on %s\n", listenAddr)
