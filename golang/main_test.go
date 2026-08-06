@@ -45,3 +45,22 @@ func TestHealthHandler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", string(resp))
 }
+
+func TestReadyHandler(t *testing.T) {
+	clientset := fake.NewSimpleClientset()
+	clientset.Discovery().(*disco.FakeDiscovery).FakedServerVersion = &version.Info{
+		GitVersion: "1.25.0-fake",
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	rec := httptest.NewRecorder()
+
+	application := &app{clientset: clientset}
+	application.readyHandler(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t,
+		`{"status":"ready","version":"1.25.0-fake"}`,
+		rec.Body.String(),
+	)
+}
