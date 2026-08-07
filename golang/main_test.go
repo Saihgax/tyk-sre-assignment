@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -104,4 +105,39 @@ func TestGetDeploymentHealth(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, result.Healthy)
 	assert.Len(t, result.Deployments, 2)
+}
+
+func TestDeploymentHealthHandler(t *testing.T) {
+	desired := int32(2)
+
+	clientset := fake.NewSimpleClientset(
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "api",
+				Namespace: "default",
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: &desired,
+			},
+			Status: appsv1.DeploymentStatus{
+				AvailableReplicas: 1,
+			},
+		},
+	)
+
+	req := httptest.NewRequest(http.MethodGet, "/deployments/health", nil)
+	rec := httptest.NewRecorder()
+
+	application := &app{clientset: clientset}
+	application.deploymentHealthHandler(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var response deploymentHealthResponse
+	err := json.Unmarshal(rec.Body.Bytes(), &response)
+
+	assert.NoError(t, err)
+	assert.False(t, response.Healthy)
+	assert.Len(t, response.Deployments, 1)
+	assert.Equal(t, "api", response.Deployments[0].Name)
 }
