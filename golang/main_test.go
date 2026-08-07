@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	disco "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/kubernetes/fake"
@@ -63,4 +66,42 @@ func TestReadyHandler(t *testing.T) {
 		`{"status":"ready","version":"1.25.0-fake"}`,
 		rec.Body.String(),
 	)
+}
+
+func TestGetDeploymentHealth(t *testing.T) {
+	apiDesired := int32(2)
+	workerDesired := int32(3)
+
+	clientset := fake.NewSimpleClientset(
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "api",
+				Namespace: "default",
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: &apiDesired,
+			},
+			Status: appsv1.DeploymentStatus{
+				AvailableReplicas: 2,
+			},
+		},
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "worker",
+				Namespace: "jobs",
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: &workerDesired,
+			},
+			Status: appsv1.DeploymentStatus{
+				AvailableReplicas: 1,
+			},
+		},
+	)
+
+	result, err := getDeploymentHealth(context.Background(), clientset)
+
+	assert.NoError(t, err)
+	assert.False(t, result.Healthy)
+	assert.Len(t, result.Deployments, 2)
 }
