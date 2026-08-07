@@ -78,7 +78,8 @@ func startServer(listenAddr string, clientset kubernetes.Interface) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", healthHandler)
-	mux.HandleFunc("/readyz", application.readyHandler)
+	mux.HandleFunc("/readyz", application.readyHandler)                        // story 3
+	mux.HandleFunc("/deployments/health", application.deploymentHealthHandler) // story 1
 
 	fmt.Printf("Server listening on %s\n", listenAddr)
 
@@ -151,4 +152,21 @@ func getDeploymentHealth(ctx context.Context, clientset kubernetes.Interface) (d
 	}
 
 	return result, nil
+}
+
+// deploymentHealthHandler returns the health of Deployments across the cluster.
+func (a *app) deploymentHealthHandler(w http.ResponseWriter, r *http.Request) {
+	result, err := getDeploymentHealth(r.Context(), a.clientset)
+	w.Header().Set("Content-Type", "application/json")
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(result)
 }
