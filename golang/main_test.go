@@ -141,3 +141,31 @@ func TestDeploymentHealthHandler(t *testing.T) {
 	assert.Len(t, response.Deployments, 1)
 	assert.Equal(t, "api", response.Deployments[0].Name)
 }
+
+func TestBuildIsolationPolicies(t *testing.T) {
+	request := isolationRequest{
+		Name:            "block-api-worker",
+		SourceNamespace: "default",
+		SourceSelector:  map[string]string{"app": "api"},
+		TargetNamespace: "jobs",
+		TargetSelector:  map[string]string{"app": "worker"},
+	}
+
+	policies, err := buildIsolationPolicies(request)
+
+	assert.NoError(t, err)
+	assert.Len(t, policies, 2)
+
+	assert.Equal(t, "block-api-worker-source", policies[0].Name)
+	assert.Equal(t, "default", policies[0].Namespace)
+	assert.Equal(t, map[string]string{"app": "api"}, policies[0].Spec.PodSelector.MatchLabels)
+
+	assert.Equal(t, "block-api-worker-target", policies[1].Name)
+	assert.Equal(t, "jobs", policies[1].Namespace)
+	assert.Equal(t, map[string]string{"app": "worker"}, policies[1].Spec.PodSelector.MatchLabels)
+
+	assert.Equal(t, []string{"Ingress", "Egress"}, []string{
+		string(policies[0].Spec.PolicyTypes[0]),
+		string(policies[0].Spec.PolicyTypes[1]),
+	})
+}

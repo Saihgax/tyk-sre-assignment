@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -28,6 +29,14 @@ type deploymentHealth struct {
 type deploymentHealthResponse struct {
 	Healthy     bool               `json:"healthy"`
 	Deployments []deploymentHealth `json:"deployments"`
+}
+
+type isolationRequest struct {
+	Name            string            `json:"name"`
+	SourceNamespace string            `json:"sourceNamespace"`
+	SourceSelector  map[string]string `json:"sourceSelector"`
+	TargetNamespace string            `json:"targetNamespace"`
+	TargetSelector  map[string]string `json:"targetSelector"`
 }
 
 func main() {
@@ -169,4 +178,53 @@ func (a *app) deploymentHealthHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(result)
+}
+
+// buildIsolationPolicies creates policies that deny ingress and egress for both selected workloads.
+func buildIsolationPolicies(request isolationRequest) ([]networkingv1.NetworkPolicy, error) {
+	if request.Name == "" {
+		return nil, fmt.Errorf("name is required")
+	}
+
+	if request.SourceNamespace == "" || request.TargetNamespace == "" {
+		return nil, fmt.Errorf("both namespaces are required")
+	}
+
+	if len(request.SourceSelector) == 0 || len(request.TargetSelector) == 0 {
+		return nil, fmt.Errorf("both selectors are required")
+	}
+
+	sourcePolicy := networkingv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      request.Name + "-source",
+			Namespace: request.SourceNamespace,
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: request.SourceSelector,
+			},
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeIngress,
+				networkingv1.PolicyTypeEgress,
+			},
+		},
+	}
+
+	targetPolicy := networkingv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      request.Name + "-target",
+			Namespace: request.TargetNamespace,
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: request.TargetSelector,
+			},
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeIngress,
+				networkingv1.PolicyTypeEgress,
+			},
+		},
+	}
+
+	return []networkingv1.NetworkPolicy{sourcePolicy, targetPolicy}, nil
 }
