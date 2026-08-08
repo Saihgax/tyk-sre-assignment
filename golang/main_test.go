@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -168,4 +169,43 @@ func TestBuildIsolationPolicies(t *testing.T) {
 		string(policies[0].Spec.PolicyTypes[0]),
 		string(policies[0].Spec.PolicyTypes[1]),
 	})
+}
+
+func TestIsolateHandler(t *testing.T) {
+	clientset := fake.NewSimpleClientset()
+
+	requestBody := `{
+		"name": "block-api-worker",
+		"sourceNamespace": "default",
+		"sourceSelector": {"app": "api"},
+		"targetNamespace": "jobs",
+		"targetSelector": {"app": "worker"}
+	}`
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/network/isolate",
+		strings.NewReader(requestBody),
+	)
+	rec := httptest.NewRecorder()
+
+	application := &app{clientset: clientset}
+	application.isolateHandler(rec, req)
+
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	defaultPolicies, err := clientset.NetworkingV1().
+		NetworkPolicies("default").
+		List(context.Background(), metav1.ListOptions{})
+	assert.NoError(t, err)
+
+	jobsPolicies, err := clientset.NetworkingV1().
+		NetworkPolicies("jobs").
+		List(context.Background(), metav1.ListOptions{})
+	assert.NoError(t, err)
+
+	assert.Len(t, defaultPolicies.Items, 1)
+	assert.Len(t, jobsPolicies.Items, 1)
+	assert.Equal(t, "block-api-worker-source", defaultPolicies.Items[0].Name)
+	assert.Equal(t, "block-api-worker-target", jobsPolicies.Items[0].Name)
 }

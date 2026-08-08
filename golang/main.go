@@ -39,6 +39,11 @@ type isolationRequest struct {
 	TargetSelector  map[string]string `json:"targetSelector"`
 }
 
+type isolationResponse struct {
+	Policies []string `json:"policies"`
+	Message  string   `json:"message"`
+}
+
 func main() {
 	kubeconfig := flag.String("kubeconfig", "", "path to kubeconfig, leave empty for in-cluster")
 	listenAddr := flag.String("address", ":8080", "HTTP server listen address")
@@ -89,6 +94,7 @@ func startServer(listenAddr string, clientset kubernetes.Interface) error {
 	mux.HandleFunc("/healthz", healthHandler)
 	mux.HandleFunc("/readyz", application.readyHandler)                        // story 3
 	mux.HandleFunc("/deployments/health", application.deploymentHealthHandler) // story 1
+	mux.HandleFunc("/network/isolate", application.isolateHandler)
 
 	fmt.Printf("Server listening on %s\n", listenAddr)
 
@@ -227,4 +233,42 @@ func buildIsolationPolicies(request isolationRequest) ([]networkingv1.NetworkPol
 	}
 
 	return []networkingv1.NetworkPolicy{sourcePolicy, targetPolicy}, nil
+}
+
+// isolateHandler creates NetworkPolicies for the two selected workloads.
+func (a *app) isolateHandler(w http.ResponseWriter, r *http.Request) {
+	var request isolationRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "invalid JSON body", http.StatusBadRequest)
+		return
+	}
+
+	policies, err := buildIsolationPolicies(request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	created := make([]string, 0, len(policies))
+
+	for _, policy := range policies {
+		_, err := a.clientset.NetworkingV1().
+			NetworkPolicies(policy.Namespace).
+			Create(r.Context(), &policy, metav1.CreateOptions{})
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		created = append(created, policy.Namespace+"/"+policy.Name)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	_ = json.NewEncoder(w).Encode(isolationResponse{
+		Policies: created,
+		Message:  "network isolation policies created",
+	})
 }
