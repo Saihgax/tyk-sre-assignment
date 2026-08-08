@@ -94,7 +94,7 @@ func startServer(listenAddr string, clientset kubernetes.Interface) error {
 	mux.HandleFunc("/healthz", healthHandler)
 	mux.HandleFunc("/readyz", application.readyHandler)                        // story 3
 	mux.HandleFunc("/deployments/health", application.deploymentHealthHandler) // story 1
-	mux.HandleFunc("/network/isolate", application.isolateHandler)
+	mux.HandleFunc("/network/isolate", application.isolateHandler) //story 2
 
 	fmt.Printf("Server listening on %s\n", listenAddr)
 
