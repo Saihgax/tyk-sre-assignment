@@ -1,21 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "tyk-sre-assignment.fullname" . }}
+  name: {{ .Release.Name }}-app
   labels:
-    {{- include "tyk-sre-assignment.labels" . | nindent 4 }}
+    app.kubernetes.io/name: tyk-sre-assignment
+    app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "tyk-sre-assignment.name" . }}
+      app.kubernetes.io/name: tyk-sre-assignment
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        {{- include "tyk-sre-assignment.labels" . | nindent 8 }}
+        app.kubernetes.io/name: tyk-sre-assignment
+        app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
-      serviceAccountName: {{ include "tyk-sre-assignment.serviceAccountName" . }}
+      serviceAccountName: {{ default (printf "%s-sa" .Release.Name) .Values.serviceAccount.name }}
       containers:
         - name: tyk-sre-assignment
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

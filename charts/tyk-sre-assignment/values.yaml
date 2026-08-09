@@ -10,7 +10,6 @@ service:
   port: 8080
 
 serviceAccount:
-  create: true
   name: ""
 
 resources: {}
