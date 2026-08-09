@@ -21,12 +21,12 @@ To execute unit tests:
 go test -v
 ```
 
-## Additional Setup
+## Additional Setup [Stories 1-5]
 
 The sections below document the completed assignment implementation while keeping
 the original project instructions above unchanged.
 
-### Local Go Checks
+### Local Go Checks [Stories 1 and 3]
 
 From the repository root:
 
@@ -48,7 +48,7 @@ curl http://127.0.0.1:8080/deployments/health
 Kubernetes API connectivity, and `/deployments/health` reports Deployment
 replica health across namespaces.
 
-### Container Image
+### Container Image [Story 4]
 
 Build the image from the repository root:
 
@@ -59,13 +59,13 @@ docker build -t tyk-sre-assignment:local .
 Docker builds the application in one stage, then copies only the executable into
 a smaller final image. The application runs as a non-root user.
 
-### GitHub Actions
+### GitHub Actions [Story 4]
 
 The workflow runs Go tests, builds the binary, and builds the Docker image on pull
 requests and pushes to `main`. It validates the image but does not publish it to a
 registry.
 
-### Helm Deployment
+### Helm Deployment [Story 5]
 
 Validate and render the chart locally:
 
@@ -86,7 +86,7 @@ helm upgrade --install tyk-sre ./charts/tyk-sre-assignment \
 The chart creates the application Deployment, Service, ServiceAccount, and the
 RBAC permissions needed to read Deployments and create NetworkPolicies.
 
-### Minikube Demonstration
+### Minikube Demonstration [Stories 1-5]
 
 For a fresh Minikube cluster with NetworkPolicy enforcement, use Calico:
 
