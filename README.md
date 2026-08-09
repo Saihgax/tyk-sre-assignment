@@ -124,6 +124,8 @@ kubectl rollout status deployment/worker
 kubectl exec deployment/api -- wget -qO- http://worker.default.svc.cluster.local:8080
 ```
 
+### Network Isolation [Story 2]
+
 Create isolation between them through the Go service:
 
 ```bash
