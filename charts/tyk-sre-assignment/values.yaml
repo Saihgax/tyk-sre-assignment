@@ -1,0 +1,16 @@
+replicaCount: 1
+
+image:
+  repository: tyk-sre-assignment
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+serviceAccount:
+  create: true
+  name: ""
+
+resources: {}
