@@ -121,7 +121,7 @@ connectivity:
 kubectl apply -f examples/test-workloads.yaml
 kubectl rollout status deployment/api
 kubectl rollout status deployment/worker
-kubectl exec deployment/api -- wget -qO- -T 3 http://worker.default.svc.cluster.local:8080
+kubectl exec deployment/api -- wget -qO- http://worker.default.svc.cluster.local:8080
 ```
 
 Create isolation between them through the Go service:
