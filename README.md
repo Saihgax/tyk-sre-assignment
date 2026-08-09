@@ -104,6 +104,16 @@ above. A running cluster can be accessed from the host with:
 kubectl port-forward service/tyk-sre-service 8080:8080
 ```
 
+Alternatively, build directly inside Minikube's Docker environment:
+
+```bash
+eval "$(minikube docker-env)"
+docker build -t tyk-sre-assignment:local .
+```
+
+With this approach, `minikube image load` is not needed because the image is
+already built in the Docker environment used by Minikube.
+
 In another terminal, create the two test workloads and verify their initial
 connectivity:
 
