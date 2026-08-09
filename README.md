@@ -56,9 +56,8 @@ Build the image from the repository root:
 docker build -t tyk-sre-assignment:local .
 ```
 
-The Dockerfile uses a Go builder stage and a small runtime stage. The final image
-contains the compiled application rather than the Go compiler or source tree, and
-the application runs as a non-root user.
+Docker builds the application in one stage, then copies only the executable into
+a smaller final image. The application runs as a non-root user.
 
 ### GitHub Actions
 
