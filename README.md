@@ -152,3 +152,28 @@ kubectl exec deployment/api -- wget -qO- -T 3 http://worker.default.svc.cluster.
 The isolation endpoint creates default-deny ingress and egress policies for the
 selected workloads. A CNI that enforces NetworkPolicy, such as Calico, is needed
 for the traffic block to be observable in a local Minikube demonstration.
+
+## Assumptions and Tradeoffs
+
+These are the decisions made where the assignment requirements were open to
+interpretation:
+
+- **Meaning of isolation:** We interpret “isolate” as strict default
+  deny for both ingress and egress on each selected workload. This blocks more
+  traffic than only blocking the two workloads from each other, but provides a
+  predictable isolation guarantee.
+- **Meaning of Deployment health:** We consider a Deployment healthy
+  when its available replicas match its desired replicas. Available replicas
+  better represent serving capacity than simply checking whether pods exist.
+- **Application scope:** We use one Go service. The `api` and
+  `worker` workloads are small test applications used to demonstrate network
+  isolation, not separate parts of the submitted service.
+- **Permissions and chart scope:** Because the service reads
+  Deployments across namespaces and creates NetworkPolicies, we chose a
+  ServiceAccount with cluster-wide RBAC. We kept the Helm chart to three
+  templates to limit complexity while retaining the permissions required by the
+  service.
+- **NetworkPolicy demonstration:** We chose Calico for Minikube
+  because the default Minikube CNI may create policies without enforcing them.
+  This makes the integration test demonstrate an actual traffic block rather
+  than only the existence of policy objects.
