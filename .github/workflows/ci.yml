@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: golang/go.sum
+
+      - name: Run Go tests
+        working-directory: golang
+        run: go test ./...
+
+      - name: Build Go binary
+        working-directory: golang
+        run: go build -o tyk-sre-assignment .
+
+      - name: Build Docker image
+          run: docker build -t tyk-sre-assignment:${{ github.sha }} .
