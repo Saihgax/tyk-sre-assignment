@@ -29,4 +29,4 @@ jobs:
         run: go build -o tyk-sre-assignment .
 
       - name: Build Docker image
-          run: docker build -t tyk-sre-assignment:${{ github.sha }} .
+        run: docker build -t tyk-sre-assignment:${{ github.sha }} .
